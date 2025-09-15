@@ -49,9 +49,9 @@ public class Interpolation {
     }
 
     private int toARGB32(Vector3 v) {
-        int r = (int) Math.round(v.x());
-        int g = (int) Math.round(v.y());
-        int b = (int) Math.round(v.z());
+        int r = (int) v.x();
+        int g = (int) v.y();
+        int b = (int) v.z();
         r = (r & 0xFF);
         g = (g & 0xFF);
         b = (b & 0xFF);

@@ -20,8 +20,11 @@ public class ImageViewer {
         Vector3 startColor = new Vector3(1.0, 0.0, 0.0); // Red
         Vector3 endColor = new Vector3(0.0, 1.0, 0.0);   // Green
         Interpolation interp = new Interpolation(startColor, endColor, 500);
-        Image img = interp.generateInterpolationImage(100);
 
+        // Generate the interpolation image
+        Image img = interp.generateInterpolationImage(100);
+        
+        // Display the image
         showImage(img, "Interpolation");
     }
 }
