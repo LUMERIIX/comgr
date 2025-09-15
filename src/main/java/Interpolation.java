@@ -1,11 +1,6 @@
-import java.awt.image.BufferedImage;
-import java.awt.image.MemoryImageSource;
-import java.util.Vector;
-
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.image.MemoryImageSource;
-import java.util.stream.Collectors;
 
 public class Interpolation {
 
@@ -53,14 +48,6 @@ public class Interpolation {
         return Vector3.lerp(startColor, endColor, t);
     }
 
-    private int toRGBA32(Vector3 v) {
-        int result = 0;
-        int r = ((int) v.x()) & 0xFF;
-        int g = ((int) v.y()) & 0xFF;
-        int b = ((int) v.z()) & 0xFF;
-        return result | (r << 16) | (g << 8) | b;
-    }
-
     private int toARGB32(Vector3 v) {
         int r = (int) Math.round(v.x() * 255.0);
         int g = (int) Math.round(v.y() * 255.0);
@@ -71,16 +58,23 @@ public class Interpolation {
         return (0xFF << 24) | (r << 16) | (g << 8) | b;
     }
 
-    public Image generateInterpolationImage(String filename, int height) {
+    public Image generateInterpolationImage(int height) {
         if (height < 1) height = 1;
         // Width is steps + 1 because we include both endpoints (0..steps)
         int width = Math.toIntExact(Math.addExact(steps, 1L));
-        int[] pixels = new int[width];
+        int[] pixels = new int[width * height];
+
+
         for (long i = 0; i <= steps; i++) {
-            //Vector3 color = interpolate(i);
-            Vector3 color = processPixel(startColor);
-            pixels[Math.toIntExact(i)] = toARGB32(color);
+            Vector3 color = interpolate(i);
+            color = processPixel(color);
+            int argb = toARGB32(color);
+            int x = Math.toIntExact(i);
+            for (int y = 0; y < height; y++) {
+                pixels[y * width + x] = argb;
+            }
         }
+
         MemoryImageSource src = new MemoryImageSource(width, height, pixels, 0, width);
         return Toolkit.getDefaultToolkit().createImage(src);
     }
