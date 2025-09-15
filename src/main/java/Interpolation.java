@@ -18,9 +18,9 @@ public class Interpolation {
 
     private Vector3 gammaCorrection(Vector3 v1) {
         return new Vector3(
-                (float) Math.pow(v1.x(), 2.2),
-                (float) Math.pow(v1.y(), 2.2),
-                (float) Math.pow(v1.z(), 2.2)
+                (float) Math.pow(v1.x(), 1 / 2.2),
+                (float) Math.pow(v1.y(), 1 / 2.2),
+                (float) Math.pow(v1.z(), 1 / 2.2)
         );
     }
 
@@ -49,9 +49,9 @@ public class Interpolation {
     }
 
     private int toARGB32(Vector3 v) {
-        int r = (int) Math.round(v.x() * 255.0);
-        int g = (int) Math.round(v.y() * 255.0);
-        int b = (int) Math.round(v.z() * 255.0);
+        int r = (int) Math.round(v.x());
+        int g = (int) Math.round(v.y());
+        int b = (int) Math.round(v.z());
         r = (r & 0xFF);
         g = (g & 0xFF);
         b = (b & 0xFF);
