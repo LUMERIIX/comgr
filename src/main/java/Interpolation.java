@@ -1,5 +1,11 @@
-import java.io.FileOutputStream;
+import java.awt.image.BufferedImage;
+import java.awt.image.MemoryImageSource;
 import java.util.Vector;
+
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.image.MemoryImageSource;
+import java.util.stream.Collectors;
 
 public class Interpolation {
 
@@ -9,6 +15,7 @@ public class Interpolation {
     protected long steps;
 
     public Interpolation(Vector3 startColor, Vector3 endColor, long steps) {
+        if (steps < 1) throw new IllegalArgumentException("steps must be >= 1");
         this.startColor = startColor;
         this.endColor = endColor;
         this.steps = steps;
@@ -42,7 +49,7 @@ public class Interpolation {
     }
 
     private Vector3 interpolate(long step) {
-        float t = (float) step / (float) steps;
+        float t = (float) step / (float) steps; // step in [0..steps]
         return Vector3.lerp(startColor, endColor, t);
     }
 
@@ -54,22 +61,28 @@ public class Interpolation {
         return result | (r << 16) | (g << 8) | b;
     }
 
-    public boolean generateInterpolationImage(String filename) {
-        Vector<Vector3> pixels = new Vector<>();
+    private int toARGB32(Vector3 v) {
+        int r = (int) Math.round(v.x() * 255.0);
+        int g = (int) Math.round(v.y() * 255.0);
+        int b = (int) Math.round(v.z() * 255.0);
+        r = (r & 0xFF);
+        g = (g & 0xFF);
+        b = (b & 0xFF);
+        return (0xFF << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    public Image generateInterpolationImage(String filename, int height) {
+        if (height < 1) height = 1;
+        // Width is steps + 1 because we include both endpoints (0..steps)
+        int width = Math.toIntExact(Math.addExact(steps, 1L));
+        int[] pixels = new int[width];
         for (long i = 0; i <= steps; i++) {
-            Vector3 color = interpolate(i);
-            color = processPixel(color);
-            pixels.add(color);
+            //Vector3 color = interpolate(i);
+            Vector3 color = processPixel(startColor);
+            pixels[Math.toIntExact(i)] = toARGB32(color);
         }
-        Image img = createImage(new MemoryImageSource(steps, 1, pixels.toArray(), 0, steps));
+        MemoryImageSource src = new MemoryImageSource(width, height, pixels, 0, width);
+        return Toolkit.getDefaultToolkit().createImage(src);
     }
-
-    public static void main(String[] args) {
-        // Initialize start and end colors
-        Vector3 startColor = new Vector3(1, 0, 0); // Red
-        Vector3 endColor = new Vector3(0, 1, 0);   // Green
-        Interpolation interp = new Interpolation(startColor, endColor, 255);
-    }
-
 
 }
