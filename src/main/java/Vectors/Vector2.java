@@ -1,3 +1,4 @@
+package Vectors;
 /*
  * Copyright (c) 2013 - 2022 Simon Felix
  * All rights reserved.
@@ -25,6 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 public record Vector2(float x, float y) {
     public static final Vector2 ZERO = new Vector2(0, 0);
     public static final Vector2 ONE = new Vector2(1, 1);

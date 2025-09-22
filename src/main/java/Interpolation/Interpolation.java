@@ -1,6 +1,9 @@
+package Interpolation;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.image.MemoryImageSource;
+
+import Vectors.Vector3;
 
 public class Interpolation {
 

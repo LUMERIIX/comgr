@@ -1,5 +1,8 @@
+package Interpolation;
 import java.awt.*;
 import javax.swing.*;
+
+import Vectors.Vector3;
 
 
 public class ImageViewer {

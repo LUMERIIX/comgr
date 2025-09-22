@@ -1,3 +1,4 @@
+package Vectors;
 /*
  * Copyright (c) 2013 - 2022 Simon Felix
  * All rights reserved.
@@ -25,6 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 public record Matrix3x2(float m11, float m12, float m21, float m22, float m31, float m32) {
 
 	public static final Matrix3x2 IDENTITY = new Matrix3x2(1, 0, 0, 1, 0, 0);
