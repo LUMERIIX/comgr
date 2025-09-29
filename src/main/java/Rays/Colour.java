@@ -10,6 +10,7 @@ public class Colour {
     public static final Vector3 WHITE = new Vector3(0.8, 0.8, 0.8);
     public static final Vector3 YELLOW = new Vector3(0.8, 0.8, 0.05);
     public static final Vector3 LIGHTCYAN = new Vector3(0.7, 0.8, 0.8);
+    public static final Vector3 BLACK = new Vector3(0, 0, 0);
 
 
     public static Vector3 gammaCorrection(Vector3 v1) {

@@ -1,6 +1,7 @@
 package Rays;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 import Vectors.Vector2;
 import Vectors.Vector3;
@@ -14,20 +15,23 @@ public class CornellBox {
     private static final int WIDTH = 512;
     private static final int HEIGHT = 512;
 
+    private static final float MONTE_CARLO_PROPABILITY = 0.05f;
+    private static final float BRDF_CONSTANT = 1.0f / (float) MONTE_CARLO_PROPABILITY;
+
     private static final Sphere leftWall = new Sphere(
-        new Vector3(-1001, 0, 0), 1000, Colour.RED); //a
+        new Vector3(-1001, 0, 0), 1000, Colour.RED, Colour.BLACK); //a
     private static final Sphere rightWall = new Sphere(
-        new Vector3(1001, 0, 0), 1000, Colour.BLUE); //b
+        new Vector3(1001, 0, 0), 1000, Colour.BLUE, Colour.BLACK); //b
     private static final Sphere backWall = new Sphere(
-        new Vector3(0, 0, 1001), 1000, Colour.GRAY); //c
+        new Vector3(0, 0, 1001), 1000, Colour.GRAY, Colour.BLACK); //c
     private static final Sphere floor = new Sphere(
-        new Vector3(0, -1001, 0), 1000, Colour.GRAY); //d
+        new Vector3(0, -1001, 0), 1000, Colour.GRAY, Colour.BLACK); //d
     private static final Sphere ceiling = new Sphere(
-        new Vector3(0, 1001, 0), 1000, Colour.WHITE); //e
+        new Vector3(0, 1001, 0), 1000, Colour.WHITE, Colour.WHITE.multiply(2.0)); //e
     private static final Sphere light = new Sphere(
-        new Vector3(-0.6, -0.7, -0.6), 0.3, Colour.YELLOW); //f
+        new Vector3(-0.6, -0.7, -0.6), 0.3, Colour.YELLOW, Colour.BLACK); //f
     private static final Sphere bigSphere = new Sphere(
-        new Vector3(0.3, -0.4, 0.3), 0.6, Colour.LIGHTCYAN); //g
+        new Vector3(0.3, -0.4, 0.3), 0.6, Colour.LIGHTCYAN, Colour.BLACK); //g
 
     private static final Sphere[] spheres = {
         leftWall,
@@ -75,6 +79,42 @@ public class CornellBox {
 
         return new Ray(eye, rayDirection);
         
+    }
+
+
+    private Vector3 uniformRandomSphereVector(Vector3 sphereNormal) {
+        Vector3 p;
+        do {
+            p = new Vector3(UniformRandom.uniformMinus1to1(),
+                            UniformRandom.uniformMinus1to1(),
+                            UniformRandom.uniformMinus1to1());
+        } while (p.lengthSquared() >= 1.0);
+
+        if(Vector3.dot(p, sphereNormal) < 0) {
+            p = p.multiply(-1);
+        }
+
+        return p;
+    }
+
+    public Vector3 ComputeColor(Vector3 o, Vector3 d) {
+        Intersection closestHitPoint = FindClosestHitPoint(scene, o, d);
+        if(UniformRandom.uniform0to1() < MONTE_CARLO_PROPABILITY) {
+            return closestHitPoint.sphere().getEmissionColor();
+        }
+
+
+        Vector3 normalSphere = Vector3.subtract(closestHitPoint.sphere().getCenter(), closestHitPoint.point());
+        Vector3 wR = uniformRandomSphereVector(normalSphere);
+
+
+        Vector3 sphereEmissions = closestHitPoint.sphere().getEmissionColor();
+
+        return sphereEmissions + 2.0f * Math.PI * BRDF_CONSTANT * Vector3.dot(BRDF(d,wR),ComputeColor(closestHitPoint.point(), wR));
+    }
+
+    public Vector3 BRDF(Vector3 wI, Vector3 wO) {
+
     }
 
     public Intersection FindClosestHitPoint(Scene s, Vector3 o, Vector3 d) {

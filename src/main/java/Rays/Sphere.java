@@ -7,12 +7,14 @@ import Vectors.Vector3;
 public class Sphere {
     private Vector3 center;
     private double radius;
-    private Vector3 color;
+    private Vector3 diffuseColor;
+    private Vector3 emissionColor;
 
-    public Sphere(Vector3 center, double radius, Vector3 color) {
+    public Sphere(Vector3 center, double radius, Vector3 diffuseColor, Vector3 emissionColor) {
         this.center = center;
         this.radius = radius;
-        this.color = color;
+        this.diffuseColor = diffuseColor;
+        this.emissionColor = emissionColor;
     }
 
     public Vector3 getCenter() {
@@ -23,8 +25,12 @@ public class Sphere {
         return radius;
     }
 
-    public Vector3 getColor() {
-        return color;
+    public Vector3 getDiffuseColor() {
+        return diffuseColor;
+    }
+
+    public Vector3 getEmissionColor() {
+        return emissionColor;
     }
 
     private record MidNightResult(boolean hasSolutions, float t1, float t2) {}
