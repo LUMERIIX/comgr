@@ -1,7 +1,11 @@
 package Rays;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import Vectors.Vector2;
 import Vectors.Vector3;
@@ -15,8 +19,10 @@ public class CornellBox {
     private static final int WIDTH = 512;
     private static final int HEIGHT = 512;
 
-    private static final float MONTE_CARLO_PROPABILITY = 0.05f;
-    private static final float BRDF_CONSTANT = 1.0f / (float) MONTE_CARLO_PROPABILITY;
+    private static final int RAYS_PER_PIXEL = 128;
+
+    private static final float MONTE_CARLO_PROPABILITY = 0.2f;
+    private static final float BRDF_CONSTANT = 1.0f / (float) (1 - MONTE_CARLO_PROPABILITY);
 
     private static final Sphere leftWall = new Sphere(
         new Vector3(-1001, 0, 0), 1000, Colour.RED, Colour.BLACK); //a
@@ -27,7 +33,7 @@ public class CornellBox {
     private static final Sphere floor = new Sphere(
         new Vector3(0, -1001, 0), 1000, Colour.GRAY, Colour.BLACK); //d
     private static final Sphere ceiling = new Sphere(
-        new Vector3(0, 1001, 0), 1000, Colour.WHITE, Colour.WHITE.multiply(2.0)); //e
+        new Vector3(0, 1001, 0), 1000, Colour.WHITE, Colour.WHITE.multiply((float)2.0)); //e
     private static final Sphere light = new Sphere(
         new Vector3(-0.6, -0.7, -0.6), 0.3, Colour.YELLOW, Colour.BLACK); //f
     private static final Sphere bigSphere = new Sphere(
@@ -84,11 +90,12 @@ public class CornellBox {
 
     private Vector3 uniformRandomSphereVector(Vector3 sphereNormal) {
         Vector3 p;
+        //while(true){
         do {
             p = new Vector3(UniformRandom.uniformMinus1to1(),
                             UniformRandom.uniformMinus1to1(),
                             UniformRandom.uniformMinus1to1());
-        } while (p.lengthSquared() >= 1.0);
+        } while (p.length() <= 1.0f);
 
         if(Vector3.dot(p, sphereNormal) < 0) {
             p = p.multiply(-1);
@@ -99,22 +106,31 @@ public class CornellBox {
 
     public Vector3 ComputeColor(Vector3 o, Vector3 d) {
         Intersection closestHitPoint = FindClosestHitPoint(scene, o, d);
+
+        if(closestHitPoint == null) {
+            return Colour.BLACK;
+        }
+
         if(UniformRandom.uniform0to1() < MONTE_CARLO_PROPABILITY) {
             return closestHitPoint.sphere().getEmissionColor();
         }
 
 
-        Vector3 normalSphere = Vector3.subtract(closestHitPoint.sphere().getCenter(), closestHitPoint.point());
-        Vector3 wR = uniformRandomSphereVector(normalSphere);
-
+        Vector3 normalSphere = Vector3.normalize(Vector3.subtract(closestHitPoint.point(),closestHitPoint.sphere().getCenter()));
+        Vector3 wR = Vector3.normalize(uniformRandomSphereVector(normalSphere));
 
         Vector3 sphereEmissions = closestHitPoint.sphere().getEmissionColor();
+        float factor = (float)(2.0f * Math.PI * BRDF_CONSTANT);
+        Vector3 wRTimesNormal = Vector3.multiply(wR, normalSphere);
+        Vector3 computeColor = ComputeColor(closestHitPoint.point(), wR);
+        Vector3 brdf = BRDF(Vector3.normalize(d), normalSphere, closestHitPoint.sphere().getDiffuseColor());
+        float brdfDotComputeColor = Vector3.dot(brdf,computeColor);
 
-        return sphereEmissions + 2.0f * Math.PI * BRDF_CONSTANT * Vector3.dot(BRDF(d,wR),ComputeColor(closestHitPoint.point(), wR));
+        return sphereEmissions.add(wRTimesNormal.multiply(brdfDotComputeColor).multiply(factor));
     }
 
-    public Vector3 BRDF(Vector3 wI, Vector3 wO) {
-
+    public Vector3 BRDF(Vector3 wI, Vector3 wO, Vector3 color) {
+        return color.multiply((float)(1.0f / Math.PI));
     }
 
     public Intersection FindClosestHitPoint(Scene s, Vector3 o, Vector3 d) {
@@ -128,11 +144,25 @@ public class CornellBox {
         List<Intersection> intersectionsInFront = intersections.stream()
                                                 .filter(v -> v.point().subtract(o).length() >= 0).toList();
         
-        return intersectionsInFront.stream().sorted((v1, v2) -> {
+        Vector3 closestHit = intersectionsInFront.stream().sorted((v1, v2) -> {
             float dist1 = Vector3.distanceSquared(o, v1.point());
             float dist2 = Vector3.distanceSquared(o, v2.point());
             return Float.compare(dist1, dist2);
-        }).findFirst().orElseThrow(() -> new IllegalStateException("No intersections in front of the eye"));
+        }).findFirst().orElseThrow(() -> new IllegalStateException("No intersections in front of the eye")).point();
+
+        Intersection closestIntersection = intersectionsInFront.stream()
+                                                .filter(v -> v.point().equals(closestHit))
+                                                .findFirst()
+                                                .orElseThrow(() -> new IllegalStateException("No intersection found for the closest hit point"));
+
+        // Epsilon correct (avoid intersection inside of the sphere surface)
+        Vector3 epsilonD = Vector3.normalize(d).multiply(10e-3f);
+        Vector3 up = new Vector3(0, 1, 0);
+        Vector3 epsilonUp = Vector3.normalize(up).multiply(10e-3f);
+        Vector3 adjustedHit = Vector3.subtract(closestHit, epsilonD);
+        adjustedHit = adjustedHit.add(epsilonUp);
+
+        return new Intersection(adjustedHit, closestIntersection.sphere());
     }
 
     public Image run() {
@@ -147,16 +177,23 @@ public class CornellBox {
                 float py = (2.0f * y / (HEIGHT - 1)) - 1.0f;
                 Vector2 pixelNDC = new Vector2(px, py);
                 Ray eyeRay = CreateEyeRay(eye, lookAt, FOV, pixelNDC);
-                Intersection intersectionPoint = FindClosestHitPoint(scene, eyeRay.getEye(), eyeRay.getDirection());
+                /*Intersection intersectionPoint = FindClosestHitPoint(scene, eyeRay.getEye(), eyeRay.getDirection());
                 if(intersectionPoint == null) {
                     // No intersection, set pixel to black
                     pixels[dstY * WIDTH + x] = 0xFF000000; // ARGB for black
                     continue;
+                }*/
+
+                // Accumulate color (keep per-pixel loop local to avoid overhead)
+                Vector3 color = new Vector3(0, 0, 0);
+                for (int s = 0; s < RAYS_PER_PIXEL; s++) {
+                    // If you need randomness for sampling, use ThreadLocalRandom inside ComputeColor
+                    color = color.add(ComputeColor(eyeRay.getEye(), eyeRay.getDirection()));
                 }
-                // For now, just set the pixel to white if there's an intersection
-                pixels[dstY * WIDTH + x] = Colour.toARGB32(intersectionPoint.sphere().getColor());
+                pixels[dstY * WIDTH + x] = Colour.toARGB32(color.multiply(1.0f / RAYS_PER_PIXEL));
             }
         }
+
         MemoryImageSource src = new MemoryImageSource(WIDTH, HEIGHT, pixels, 0, WIDTH);
         return Toolkit.getDefaultToolkit().createImage(src);
     }

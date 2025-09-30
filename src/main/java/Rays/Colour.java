@@ -7,7 +7,7 @@ public class Colour {
     public static final Vector3 RED = new Vector3(0.8, 0.05, 0.05);
     public static final Vector3 BLUE = new Vector3(0.05, 0.05, 0.8);
     public static final Vector3 GRAY = new Vector3(0.5, 0.5, 0.5);
-    public static final Vector3 WHITE = new Vector3(0.8, 0.8, 0.8);
+    public static final Vector3 WHITE = new Vector3(1.0, 1.0, 1.0);
     public static final Vector3 YELLOW = new Vector3(0.8, 0.8, 0.05);
     public static final Vector3 LIGHTCYAN = new Vector3(0.7, 0.8, 0.8);
     public static final Vector3 BLACK = new Vector3(0, 0, 0);
