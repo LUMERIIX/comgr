@@ -168,6 +168,7 @@ public class CornellBox {
         int[] pixels = new int[WIDTH * HEIGHT];
 
         int threadCount = Math.max(1, Runtime.getRuntime().availableProcessors());
+        System.out.println("Using " + threadCount + " threads for rendering.");
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         List<Future<?>> futures = new ArrayList<>();
 
