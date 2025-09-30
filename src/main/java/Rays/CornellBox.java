@@ -19,7 +19,7 @@ public class CornellBox {
     private static final int WIDTH = 512;
     private static final int HEIGHT = 512;
 
-    private static final int RAYS_PER_PIXEL = 128;
+    private static final int RAYS_PER_PIXEL = 64;
 
     private static final float MONTE_CARLO_PROPABILITY = 0.2f;
     private static final float BRDF_CONSTANT = 1.0f / (float) (1 - MONTE_CARLO_PROPABILITY);
@@ -117,16 +117,15 @@ public class CornellBox {
 
 
         Vector3 normalSphere = Vector3.normalize(Vector3.subtract(closestHitPoint.point(),closestHitPoint.sphere().getCenter()));
+        Vector3 wR_hat = Vector3.normalize(uniformRandomSphereVector(normalSphere));
         Vector3 wR = Vector3.normalize(uniformRandomSphereVector(normalSphere));
 
         Vector3 sphereEmissions = closestHitPoint.sphere().getEmissionColor();
         float factor = (float)(2.0f * Math.PI * BRDF_CONSTANT);
-        Vector3 wRTimesNormal = Vector3.multiply(wR, normalSphere);
-        Vector3 computeColor = ComputeColor(closestHitPoint.point(), wR);
+        float wRTimesNormal = Vector3.dot(wR, normalSphere) * factor;
+        Vector3 computeColor = ComputeColor(closestHitPoint.point(), wR_hat);
         Vector3 brdf = BRDF(Vector3.normalize(d), normalSphere, closestHitPoint.sphere().getDiffuseColor());
-        float brdfDotComputeColor = Vector3.dot(brdf,computeColor);
-
-        return sphereEmissions.add(wRTimesNormal.multiply(brdfDotComputeColor).multiply(factor));
+        return sphereEmissions.add(brdf.multiply(wRTimesNormal).multiply(computeColor));
     }
 
     public Vector3 BRDF(Vector3 wI, Vector3 wO, Vector3 color) {
@@ -156,9 +155,9 @@ public class CornellBox {
                                                 .orElseThrow(() -> new IllegalStateException("No intersection found for the closest hit point"));
 
         // Epsilon correct (avoid intersection inside of the sphere surface)
-        Vector3 epsilonD = Vector3.normalize(d).multiply(10e-3f);
+        Vector3 epsilonD = Vector3.normalize(d).multiply(10e-4f);
         Vector3 up = new Vector3(0, 1, 0);
-        Vector3 epsilonUp = Vector3.normalize(up).multiply(10e-3f);
+        Vector3 epsilonUp = Vector3.normalize(up).multiply(10e-4f);
         Vector3 adjustedHit = Vector3.subtract(closestHit, epsilonD);
         adjustedHit = adjustedHit.add(epsilonUp);
 
@@ -168,30 +167,41 @@ public class CornellBox {
     public Image run() {
         int[] pixels = new int[WIDTH * HEIGHT];
 
-        // Create eye rays for each pixel
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                int dstY = HEIGHT - 1 - y; // invert y for image coordinates
-                // Convert pixel coordinate to [-1,1] range
-                float px = (2.0f * x / (WIDTH - 1)) - 1.0f;
-                float py = (2.0f * y / (HEIGHT - 1)) - 1.0f;
-                Vector2 pixelNDC = new Vector2(px, py);
-                Ray eyeRay = CreateEyeRay(eye, lookAt, FOV, pixelNDC);
-                /*Intersection intersectionPoint = FindClosestHitPoint(scene, eyeRay.getEye(), eyeRay.getDirection());
-                if(intersectionPoint == null) {
-                    // No intersection, set pixel to black
-                    pixels[dstY * WIDTH + x] = 0xFF000000; // ARGB for black
-                    continue;
-                }*/
+        int threadCount = Math.max(1, Runtime.getRuntime().availableProcessors());
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        List<Future<?>> futures = new ArrayList<>();
 
-                // Accumulate color (keep per-pixel loop local to avoid overhead)
-                Vector3 color = new Vector3(0, 0, 0);
-                for (int s = 0; s < RAYS_PER_PIXEL; s++) {
-                    // If you need randomness for sampling, use ThreadLocalRandom inside ComputeColor
-                    color = color.add(ComputeColor(eyeRay.getEye(), eyeRay.getDirection()));
+        for (int y = 0; y < HEIGHT; y++) {
+            final int row = y;
+            futures.add(executor.submit(() -> {
+                for (int x = 0; x < WIDTH; x++) {
+                    int dstY = HEIGHT - 1 - row; // invert y for image coordinates
+                    float px = (2.0f * x / (WIDTH - 1)) - 1.0f;
+                    float py = (2.0f * row / (HEIGHT - 1)) - 1.0f;
+                    Vector2 pixelNDC = new Vector2(px, py);
+                    Ray eyeRay = CreateEyeRay(eye, lookAt, FOV, pixelNDC);
+
+                    Vector3 color = new Vector3(0, 0, 0);
+                    for (int s = 0; s < RAYS_PER_PIXEL; s++) {
+                        color = color.add(ComputeColor(eyeRay.getEye(), eyeRay.getDirection()));
+                    }
+                    color = Colour.gammaCorrection(color.multiply(1.0f / RAYS_PER_PIXEL));
+                    pixels[dstY * WIDTH + x] = Colour.toARGB32(color);
                 }
-                pixels[dstY * WIDTH + x] = Colour.toARGB32(color.multiply(1.0f / RAYS_PER_PIXEL));
+            }));
+        }
+
+        try {
+            for (Future<?> future : futures) {
+                future.get();
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Rendering interrupted", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Rendering task failed", e);
+        } finally {
+            executor.shutdown();
         }
 
         MemoryImageSource src = new MemoryImageSource(WIDTH, HEIGHT, pixels, 0, WIDTH);
@@ -202,3 +212,4 @@ public class CornellBox {
 
     
 }
+
