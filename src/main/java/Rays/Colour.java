@@ -10,7 +10,7 @@ public class Colour {
     public static final Vector3 WHITE = new Vector3(1.0, 1.0, 1.0);
     public static final Vector3 YELLOW = new Vector3(0.8, 0.8, 0.05);
     public static final Vector3 LIGHTCYAN = new Vector3(0.7, 0.8, 0.8);
-    public static final Vector3 BLACK = new Vector3(0, 0, 0);
+    public static final Vector3 BLACK = new Vector3(0.0, 0.0, 0.0);
 
 
     public static Vector3 gammaCorrection(Vector3 v1) {
@@ -22,13 +22,13 @@ public class Colour {
     }
 
     public static int toARGB32(Vector3 v) {
-        int r = (int) (v.x() * 255);
-        int g = (int) (v.y() * 255);
-        int b = (int) (v.z() * 255);
-        r = (r & 0xFF);
-        g = (g & 0xFF);
-        b = (b & 0xFF);
-        return (0xFF << 24) | (r << 16) | (g << 8) | b;
+        float r = Math.max(0f, Math.min(1f, (float)v.x()));
+        float g = Math.max(0f, Math.min(1f, (float)v.y()));
+        float b = Math.max(0f, Math.min(1f, (float)v.z()));
+        int ri = (int)(r * 255f);
+        int gi = (int)(g * 255f);
+        int bi = (int)(b * 255f);
+        return (0xFF << 24) | (ri << 16) | (gi << 8) | bi;
     }
 
 }
