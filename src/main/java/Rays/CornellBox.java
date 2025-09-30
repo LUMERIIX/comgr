@@ -157,9 +157,9 @@ public class CornellBox {
         // Epsilon correct (avoid intersection inside of the sphere surface)
         Vector3 epsilonD = Vector3.normalize(d).multiply(10e-4f);
         Vector3 up = new Vector3(0, 1, 0);
-        Vector3 epsilonUp = Vector3.normalize(up).multiply(10e-4f);
+        //Vector3 epsilonUp = Vector3.normalize(up).multiply(10e-4f);
         Vector3 adjustedHit = Vector3.subtract(closestHit, epsilonD);
-        adjustedHit = adjustedHit.add(epsilonUp);
+        //adjustedHit = adjustedHit.add(epsilonUp);
 
         return new Intersection(adjustedHit, closestIntersection.sphere());
     }
