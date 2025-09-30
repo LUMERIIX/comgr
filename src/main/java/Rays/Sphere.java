@@ -4,17 +4,17 @@ import java.util.List;
 
 import Vectors.Vector3;
 
-public class Sphere {
+public class Sphere implements RenderObject {
     private Vector3 center;
     private double radius;
-    private Vector3 diffuseColor;
-    private Vector3 emissionColor;
+    private Material material;
+    //private Vector3 diffuseColor;
+    //private Vector3 emissionColor;
 
-    public Sphere(Vector3 center, double radius, Vector3 diffuseColor, Vector3 emissionColor) {
+    public Sphere(Vector3 center, double radius, Material material) {
         this.center = center;
         this.radius = radius;
-        this.diffuseColor = diffuseColor;
-        this.emissionColor = emissionColor;
+        this.material = material;
     }
 
     public Vector3 getCenter() {
@@ -25,12 +25,8 @@ public class Sphere {
         return radius;
     }
 
-    public Vector3 getDiffuseColor() {
-        return diffuseColor;
-    }
-
-    public Vector3 getEmissionColor() {
-        return emissionColor;
+    public Material getMaterial() {
+        return material;
     }
 
     private record MidNightResult(boolean hasSolutions, float t1, float t2) {}
@@ -70,5 +66,20 @@ public class Sphere {
         }
 
         return intersections;
+    }
+
+    @Override
+    public Vector3 normalToPoint(Vector3 point) {
+        return Vector3.normalize(Vector3.subtract(point, center));
+    }
+
+    @Override
+    public Vector3 getDiffuseColor() {
+        return material.getDiffuseColor();
+    }
+
+    @Override
+    public Vector3 getEmissionColor() {
+        return material.getEmissionColor();
     }
 }

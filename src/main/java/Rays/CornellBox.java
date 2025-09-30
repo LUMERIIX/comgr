@@ -19,12 +19,12 @@ public class CornellBox {
     private static final int WIDTH = 512;
     private static final int HEIGHT = 512;
 
-    private static final int RAYS_PER_PIXEL = 64;
+    private static final int RAYS_PER_PIXEL = 16;
 
     private static final float MONTE_CARLO_PROPABILITY = 0.2f;
     private static final float BRDF_CONSTANT = 1.0f / (float) (1 - MONTE_CARLO_PROPABILITY);
 
-    private static final Sphere leftWall = new Sphere(
+    /*private static final Sphere leftWall = new Sphere(
         new Vector3(-1001, 0, 0), 1000, Colour.RED, Colour.BLACK); //a
     private static final Sphere rightWall = new Sphere(
         new Vector3(1001, 0, 0), 1000, Colour.BLUE, Colour.BLACK); //b
@@ -37,7 +37,22 @@ public class CornellBox {
     private static final Sphere light = new Sphere(
         new Vector3(-0.6, -0.7, -0.6), 0.3, Colour.YELLOW, Colour.BLACK); //f
     private static final Sphere bigSphere = new Sphere(
-        new Vector3(0.3, -0.4, 0.3), 0.6, Colour.LIGHTCYAN, Colour.BLACK); //g
+        new Vector3(0.3, -0.4, 0.3), 0.6, Colour.LIGHTCYAN, Colour.BLACK); //g*/
+
+    private static final Sphere leftWall = new Sphere(
+        new Vector3(-1001, 0, 0), 1000, new DiffuseMaterial(Colour.RED, Colour.BLACK)); //a
+    private static final Sphere rightWall = new Sphere(
+        new Vector3(1001, 0, 0), 1000, new DiffuseMaterial(Colour.BLUE, Colour.BLACK)); //b
+    private static final Sphere backWall = new Sphere(
+        new Vector3(0, 0, 1001), 1000, new DiffuseMaterial(Colour.GRAY, Colour.BLACK)); //c
+    private static final Sphere floor = new Sphere(
+        new Vector3(0, -1001, 0), 1000, new DiffuseMaterial(Colour.GRAY, Colour.BLACK)); //d
+    private static final Sphere ceiling = new Sphere(
+        new Vector3(0, 1001, 0), 1000, new DiffuseMaterial(Colour.WHITE, Colour.WHITE.multiply((float)2.0))); //e
+    private static final Sphere light = new Sphere(
+        new Vector3(-0.6, -0.7, -0.6), 0.3, new DiffuseMaterial(Colour.YELLOW, Colour.BLACK)); //f
+    private static final Sphere bigSphere = new Sphere(
+        new Vector3(0.3, -0.4, 0.3), 0.6, new SpecularMaterial(Colour.LIGHTCYAN, Colour.BLACK, Colour.WHITE)); //g
 
     private static final Sphere[] spheres = {
         leftWall,
@@ -124,13 +139,13 @@ public class CornellBox {
         float factor = (float)(2.0f * Math.PI * BRDF_CONSTANT);
         float wRTimesNormal = Vector3.dot(wR, normalSphere) * factor;
         Vector3 computeColor = ComputeColor(closestHitPoint.point(), wR_hat);
-        Vector3 brdf = BRDF(Vector3.normalize(d), normalSphere, closestHitPoint.sphere().getDiffuseColor());
+        Vector3 brdf = closestHitPoint.sphere().getMaterial().BRDFevaluate(Vector3.normalize(d), closestHitPoint.point(), closestHitPoint.sphere());
         return sphereEmissions.add(brdf.multiply(wRTimesNormal).multiply(computeColor));
     }
 
-    public Vector3 BRDF(Vector3 wI, Vector3 wO, Vector3 color) {
+    /*public Vector3 BRDF(Vector3 wI, Vector3 wO, Vector3 color) {
         return color.multiply((float)(1.0f / Math.PI));
-    }
+    }*/
 
     public Intersection FindClosestHitPoint(Scene s, Vector3 o, Vector3 d) {
         List<Intersection> intersections = new ArrayList<>();
@@ -155,11 +170,11 @@ public class CornellBox {
                                                 .orElseThrow(() -> new IllegalStateException("No intersection found for the closest hit point"));
 
         // Epsilon correct (avoid intersection inside of the sphere surface)
-        Vector3 epsilonD = Vector3.normalize(d).multiply(10e-4f);
-        Vector3 up = new Vector3(0, 1, 0);
-        //Vector3 epsilonUp = Vector3.normalize(up).multiply(10e-4f);
+        Vector3 epsilonD = Vector3.normalize(d).multiply(10e-3f);
+        Vector3 nHp = Vector3.normalize(closestIntersection.sphere().normalToPoint(closestHit));
+        Vector3 epsilonUp = Vector3.normalize(nHp).multiply(10e-3f);
         Vector3 adjustedHit = Vector3.subtract(closestHit, epsilonD);
-        //adjustedHit = adjustedHit.add(epsilonUp);
+        adjustedHit = adjustedHit.add(epsilonUp);
 
         return new Intersection(adjustedHit, closestIntersection.sphere());
     }
